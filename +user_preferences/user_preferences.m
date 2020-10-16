@@ -7,6 +7,9 @@ function preferences = user_preferences(preferences,session)
 % preferences.waveform.wfWin_sec = 0.004;      % Larger size of waveform windows for filterning. total width in ms
 % preferences.waveform.wfWinKeep = 0.0008;     % half width in ms
 % preferences.waveform.showWaveforms = true;
+
+preferences.putativeCellType.troughToPeak_boundary = 0.56; %0.525; % Narrow interneuron assigned if troughToPeak <= 0.425ms
+
 disp('User preferences loaded successfully')
 
 end
