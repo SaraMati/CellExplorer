@@ -9,6 +9,7 @@ function preferences = user_preferences(preferences,session)
 % preferences.waveform.showWaveforms = true;
 
 preferences.putativeCellType.troughToPeak_boundary = 0.56; %0.525; % Narrow interneuron assigned if troughToPeak <= 0.425ms
+preferences.waveform.wfWinKeep = 0.00128;        % half width in seconds
 
 disp('User preferences loaded successfully')
 
