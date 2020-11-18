@@ -175,10 +175,10 @@ for i = 1:length(unitsToProcess)
         
         subplot(2,3,4), hold on,
         plot(spikes.timeWaveform{ii},spikes.rawWaveform{ii}), title(['Raw waveform (',num2str(ii),'/',num2str(numel(unitsToProcess)),')']), xlabel('Time (ms)'), ylabel('uV')
-        xlim([-0.8,0.8])
+%         xlim([-0.8,0.8])
         subplot(2,3,5), hold on,
         plot(spikes.timeWaveform{ii},spikes.filtWaveform{ii}), title('Filtered waveform'), xlabel('Time (ms)'), ylabel('uV')
-        xlim([-0.8,0.8])
+%         xlim([-0.8,0.8])
         subplot(3,3,3), hold off
         plot(spikes.peakVoltage_sorted{ii},'.-b'), hold on
         plot(x,fitCoeffValues(1)*exp(-x/fitCoeffValues(2))+fitCoeffValues(3),'r'),
