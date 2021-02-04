@@ -19,10 +19,11 @@ function [cell_metrics,cell_metrics_idxs] = loadCellMetrics(varargin)
 %   Example calls
 %   cell_metrics = loadCellMetrics('basepath',pwd);
 %   cell_metrics = loadCellMetrics('session',session);
+%  [cell_metrics,Pyramidal_indexes] = loadCellMetrics('session',session,'putativeCellType',{'Pyramidal'});
 
 % By Peter Petersen
 % petersen.peter@gmail.com
-% Last edited: 20-11-2020
+% Last edited: 10-01-2021
 
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
@@ -107,6 +108,7 @@ elseif ~isempty(id) || ~isempty(sessionin)
     end
     if exist(fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat']),'file')
         load(fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat']))
+        cell_metrics.general.basepath = basepath;
     else
         warning(['Error loading metrics: ' fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat'])])
     end
@@ -120,6 +122,7 @@ elseif ~isempty(basepath)
     end
     if exist(fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat']),'file')
         load(fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat']))
+        cell_metrics.general.basepath = basepath;
     else
         warning(['Error loading metrics: ' fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat'])])
     end
@@ -128,6 +131,7 @@ elseif ~isempty(session)
     basename = session.general.name;
     if exist(fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat']),'file')
         load(fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat']))
+        cell_metrics.general.basepath = basepath;
     else
         warning(['Error loading metrics: ' fullfile(basepath,[basename,'.' ,saveAs,'.cellinfo.mat'])])
     end

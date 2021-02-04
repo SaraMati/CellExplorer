@@ -1,4 +1,4 @@
-function [session,parameters,statusExit] = gui_session(sessionIn,parameters)
+function [session,parameters,statusExit] = gui_session(sessionIn,parameters,activeTab)
 % Displays a GUI allowing you to edit parameters for the CellExplorer and metadata for a session
 %
 % INPUTS
@@ -22,11 +22,10 @@ function [session,parameters,statusExit] = gui_session(sessionIn,parameters)
 % Last edited: 08-07-2020
 
 % Lists
-sortingMethodList = {'KiloSort', 'KiloSort2','SpyKING CIRCUS', 'Klustakwik', 'MaskedKlustakwik','MountainSort','IronClust','MClust','UltraMegaSort2000'}; % Spike sorting methods
-sortingFormatList = {'Phy', 'KiloSort', 'SpyKING CIRCUS', 'Klustakwik', 'KlustaViewa', 'Neurosuite','MountainSort','IronClust','ALF','AllenSDK','MClust','UltraMegaSort2000'}; % Spike sorting formats
+sortingMethodList = {'KiloSort', 'KiloSort2','SpyKING CIRCUS', 'Klustakwik', 'MaskedKlustakwik','MountainSort','IronClust','MClust','Wave_clus'}; % Spike sorting methods
+sortingFormatList = {'Phy', 'KiloSort', 'SpyKING CIRCUS', 'Klustakwik', 'KlustaViewa', 'Neurosuite','MountainSort','IronClust','ALF','allensdk','MClust','Wave_clus'}; % Spike sorting formats
 inputsTypeList = {'adc', 'aux','dat', 'dig'}; % input data types
 sessionTypesList = {'Chronic', 'Acute'}; % session types
-speciesTypesList = {'Rat', 'Mouse','Red-eared Turtles'}; % animal species
 
 % metrics in cell metrics pipeline
 UI.list.metrics = {'waveform_metrics','PCA_features','acg_metrics','deepSuperficial','monoSynaptic_connections','theta_metrics','spatial_metrics','event_metrics','manipulation_metrics','state_metrics','psth_metrics'};
@@ -59,12 +58,22 @@ if exist('sessionIn','var') && isstruct(sessionIn)
     else
         basepath = '';
     end
-elseif exist('sessionIn','var') && ischar(sessionIn) && exist(sessionIn,'file')
-    disp(['Loading ' sessionIn]);
-    load(sessionIn,'session');
+elseif exist('sessionIn','var') && ischar(sessionIn) && exist(sessionIn,'file') == 2
+    disp(['Loading from session file: ' sessionIn]);
+    load(fullfile(sessionIn),'session');
     [filepath,~,~] = fileparts(sessionIn);
     basepath = filepath;
     sessionIn = session;
+elseif exist('sessionIn','var') && ischar(sessionIn) && exist(sessionIn,'dir') == 7
+    disp(['Loading from basepath: ' sessionIn]);
+     basepath = sessionIn;
+     [~,basename,~] = fileparts(sessionIn);
+     if exist(fullfile(basepath,[basename,'.session.mat']),'file')
+         session = loadSession(basepath,basename);
+     else
+         session = sessionTemplate(basepath);
+     end
+     sessionIn = session;
 else
     basepath = pwd;
     [~,basename,~] = fileparts(pwd);
@@ -161,6 +170,8 @@ end
 % File
 UI.menu.file.topMenu = uimenu(UI.fig,menuLabel,'File');
 UI.menu.file.save = uimenu(UI.menu.file.topMenu,menuLabel,'Save session file',menuSelectedFcn,@(~,~)saveSessionFile,'Accelerator','S');
+uimenu(UI.menu.file.topMenu,menuLabel,'Import metadata from KiloSort',menuSelectedFcn,@(~,~)importKiloSort,'Separator','on');
+uimenu(UI.menu.file.topMenu,menuLabel,'Import metadata via template script',menuSelectedFcn,@(~,~)importMetadataTemplate);
 uimenu(UI.menu.file.topMenu,menuLabel,'Exit GUI with changes',menuSelectedFcn,@(~,~)CloseMetricsWindow,'Separator','on');
 uimenu(UI.menu.file.topMenu,menuLabel,'Exit GUI without changes',menuSelectedFcn,@(~,~)cancelMetricsWindow);
 
@@ -190,6 +201,7 @@ if enableDatabase
     uimenu(UI.menu.buzLabDB.topMenu,menuLabel,'Edit credentials',menuSelectedFcn,@editDBcredentials,'Separator','on');
 uimenu(UI.menu.buzLabDB.topMenu,menuLabel,'Edit repository paths',menuSelectedFcn,@editDBrepositories);
 end
+
 % Help
 UI.menu.help.topMenu = uimenu(UI.fig,menuLabel,'Help');
 uimenu(UI.menu.help.topMenu,menuLabel,'Tutorial on session metadata',menuSelectedFcn,@buttonHelp);
@@ -200,7 +212,7 @@ uimenu(UI.menu.help.topMenu,menuLabel,'Documentation of session metadata structu
 % % % % % % % % % % % % % % % % % % % %
 
 UI.uitabgroup = uitabgroup('Units','normalized','Position',[0 0.06 1 0.94],'Parent',UI.fig,'Units','normalized');
-if exist('parameters','var')
+if exist('parameters','var') && ~isempty(parameters)
     UI.tabs.parameters = uitab(UI.uitabgroup,'Title','CellExplorer');
 end
 UI.tabs.general = uitab(UI.uitabgroup,'Title','General','tooltip',sprintf('session.general: \nGeneral information about the dataset'));
@@ -223,7 +235,7 @@ UI.popupmenu.log = uicontrol('Style','popupmenu','String',{'Message log'},'Horiz
 
 % % % % % % % % % % % % % % % % % % % %
 % CellExplorer: Cell metrics parameters
-if exist('parameters','var')
+if exist('parameters','var') && ~isempty(parameters)
     % Include metrics
     uicontrol('Parent',UI.tabs.parameters,'Style', 'text', 'String', 'Include metrics (default: all)', 'Position', [5, 500, 190, 20],'HorizontalAlignment','left', 'fontweight', 'bold','Units','normalized');
     UI.listbox.includeMetrics = uicontrol('Parent',UI.tabs.parameters,'Style','listbox','Position',[5 330 190 170],'Units','normalized','String',UI.list.metrics,'max',100,'min',0,'Value',compareStringArray(UI.list.metrics,parameters.metrics),'Units','normalized','tooltip',sprintf('Select metrics to process by type'));
@@ -457,6 +469,9 @@ uicontrol('Parent',UI.tabs.channelTags,'Style','pushbutton','Position',[230, 10,
 % Loading session struct into gui
 importSessionStruct
 UI.fig.Visible = 'on';
+if exist('activeTab','var')
+    UI.uitabgroup.SelectedTab = UI.tabs.(activeTab);
+end
 uiLoaded = true;
 uiwait(UI.fig)
 
@@ -545,7 +560,7 @@ uiwait(UI.fig)
     end
     
     function importSessionStruct
-        if exist('parameters','var')
+        if exist('parameters','var') && ~isempty(parameters)
             for iParams = 1:length(UI.list.params)
                 UI.checkbox.params(iParams).Value = parameters.(UI.list.params{iParams});
             end
@@ -773,13 +788,9 @@ uiwait(UI.fig)
     
     function readBackFields
         % Saving parameters
-        if exist('parameters','var')
+        if exist('parameters','var') && ~isempty(parameters)
             for iParams = 1:length(UI.list.params)
-                if isfield(parameters,UI.list.params{iParams}) && islogical(parameters.(UI.list.params{iParams}))
-                    parameters.(UI.list.params{iParams}) = logical(UI.checkbox.params(iParams).Value);
-                else
-                    parameters.(UI.list.params{iParams}) = UI.checkbox.params(iParams).Value;
-                end
+                parameters.(UI.list.params{iParams}) = logical(UI.checkbox.params(iParams).Value);
             end
             if ~isempty(UI.listbox.includeMetrics.Value)
                 parameters.metrics = UI.listbox.includeMetrics.String(UI.listbox.includeMetrics.Value);
@@ -795,12 +806,6 @@ uiwait(UI.fig)
         session.general.time = UI.edit.time.String;
         session.general.name = UI.edit.session.String;
         session.general.basePath = UI.edit.basepath.String;
-%         if isfield(session,'spikeSorting') && ~isempty(session.spikeSorting) && isfield(session.spikeSorting{1},'relativePath')
-%             session.general.clusteringPath = session.spikeSorting{1}.relativePath;
-%         else 
-%             session.general.clusteringPath = '';
-%         end
-        
         session.general.duration = UI.edit.duration.String;
         session.general.location = UI.edit.location.String;
         session.general.experimenters = UI.edit.experimenters.String;
@@ -885,12 +890,12 @@ uiwait(UI.fig)
                 tableData{fn,1} = false;
                 tableData{fn,2} = tagFieldnames{fn};
                 if isfield(session.channelTags.(tagFieldnames{fn}),'channels')
-                    tableData{fn,3} = num2str(session.channelTags.(tagFieldnames{fn}).channels);
+                    tableData{fn,3} = num2str(session.channelTags.(tagFieldnames{fn}).channels(:)');
                 else
                     tableData{fn,3} = '';
                 end
                 if isfield(session.channelTags.(tagFieldnames{fn}),'electrodeGroups')
-                    tableData{fn,4} = num2str(session.channelTags.(tagFieldnames{fn}).electrodeGroups);
+                    tableData{fn,4} = num2str(session.channelTags.(tagFieldnames{fn}).electrodeGroups(:)');
                 else
                     tableData{fn,4} = '';
                 end
@@ -1326,12 +1331,12 @@ uiwait(UI.fig)
         if exist('regionIn','var')
             InitTag = regionIn;
             if isfield(session.channelTags.(regionIn),'channels')
-                initChannels = num2str(session.channelTags.(regionIn).channels);
+                initChannels = num2str(session.channelTags.(regionIn).channels(:)');
             else
                 initChannels = '';
             end
             if isfield(session.channelTags.(regionIn),'electrodeGroups')
-                initElectrodeGroups = num2str(session.channelTags.(regionIn).electrodeGroups);
+                initElectrodeGroups = num2str(session.channelTags.(regionIn).electrodeGroups(:)');
             else
                 initElectrodeGroups = '';
             end
@@ -2499,6 +2504,39 @@ uiwait(UI.fig)
 %             errordlg(['xml file not accessible: ' xml_filepath],'Error')
             MsgLog(['xml file not accessible: ' xml_filepath],4)
         end
+    end
+    
+    function importKiloSort
+        if isfield(session,'spikeSorting') && isfield(session.spikeSorting{1},'relativePath')
+            relativePath = session.spikeSorting{1}.relativePath;
+        else
+            relativePath = ''; % Relative path to the clustered data (here assumed to be the basepath)
+        end
+        rezFile = dir(fullfile(basepath,relativePath,'rez*.mat'));
+        
+        if ~isempty(rezFile)
+            rezFile = fullfile(rezFile.folder,rezFile.name);
+            MsgLog('Importing KiloSort metadata...',0)
+            session = loadKiloSortMetadata(session,rezFile);
+            updateChannelGroupsList
+            UIsetString(session.extracellular,'sr'); % Sampling rate of dat file
+            UIsetString(session.extracellular,'srLfp'); % Sampling rate of lfp file
+            UIsetString(session.extracellular,'nChannels'); % Number of channels
+            MsgLog('KiloSort metadata imported via rez file',0)
+        else
+%             errordlg(['xml file not accessible: ' xml_filepath],'Error')
+            MsgLog('rez file does not exist',4)
+        end
+    end
+    
+    function importMetadataTemplate
+            MsgLog('Importing metadata using template',0)
+            session = sessionTemplate(session);
+            updateChannelGroupsList
+            UIsetString(session.extracellular,'sr'); % Sampling rate of dat file
+            UIsetString(session.extracellular,'srLfp'); % Sampling rate of lfp file
+            UIsetString(session.extracellular,'nChannels'); % Number of channels
+            MsgLog('Metadata imported using template',0)
     end
     
     function syncChannelGroups

@@ -27,6 +27,9 @@ preferences.psth.duration = 0;                  % duration of PSTH (for half the
 preferences.psth.smoothing = 5;                 % any gaussian smoothing to apply? units of bins.
 preferences.psth.percentile = 99;               % if events does not have the same length, the event duration can be determined from percentile of the distribution of events
 
+% ACG metrics
+preferences.acg_metrics.population_modIndex = true;
+
 % Other
 preferences.other.firingRateAcrossTime_binsize = 3*60;      % 180 seconds default bin_size
 
@@ -50,14 +53,13 @@ preferences.putativeCellType.acg_tau_rise_boundary = 6;     % acg_tau_rise > 6ms
 % Hippocampal preferences
 % % % % % % % % % % % % % % % % % % % %
 % Deep superficial 
-preferences.deepSuperficial.ripples_durations = [50 150]; % in ms
-preferences.deepSuperficial.ripples_passband = [120 180]; % in Hz
+preferences.deepSuperficial.ripples_durations = [20 150]; % in ms
+preferences.deepSuperficial.ripples_passband = [80 240]; % in Hz
 
 % Theta oscillation metrics
 preferences.theta.bins = [-1:0.05:1]*pi; % theta bins from -pi to pi
 preferences.theta.speed_threshold = 10;  % behavioral running speed (cm/s)
 preferences.theta.min_spikes = 500;      % only calculated if the unit has above 500 spikes
-
 
 % % % % % % % % % % % % % % % % % % % %
 % User preferences 

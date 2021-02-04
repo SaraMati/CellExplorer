@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Ground truth data
-parent: Graphical interface
-nav_order: 7
+parent: Public data
+nav_order: 2
 ---
 # Ground truth data
 {: .no_toc}
@@ -17,7 +17,7 @@ At present (November 2020) the list includes PV, SST, Axo-axonic cells, VGAT and
 | VGAT       | 15    | Yuta Senzai, Buzsaki lab |
 | VIP        | 14    | Josh Siegle with the Allen Institute |
 
-![](https://buzsakilab.com/wp/wp-content/uploads/2020/11/groundTruth_CellExplorerPlot.png){: .mt-4}
+[![](https://buzsakilab.com/wp/wp-content/uploads/2020/11/groundTruth_CellExplorerPlot.png)](https://buzsakilab.com/wp/wp-content/uploads/2020/11/groundTruth_CellExplorerPlot.png){: .mt-4}
 
 ### Classifying your cells in CellExplorer
 You can also implement your own ground truth cells into the pipeline or do the classification in CellExplorer. Once classified you can share your metrics list with collaborators or provide them for publications.

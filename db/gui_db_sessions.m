@@ -1,4 +1,11 @@
 function [basenames,basepaths,exitMode] = gui_db_sessions(basenames_in)
+    % Shows a list of sessions ffrom the Buzsaki lab databank
+    % This function is part of CellExplorer
+    %
+    % Example call
+    % [basenames,basepaths,exitMode] = gui_db_sessions
+    
+    % By Peter Petersen
     exitMode = 0;
     db = [];
     basenames = {};
@@ -50,7 +57,7 @@ function [basenames,basepaths,exitMode] = gui_db_sessions(basenames_in)
     end
 
     function UpdateSummaryText
-        cellCount = sum(cell2mat( cellfun(@(x) str2double(x),loadDB.sessionList.Data(:,4),'UniformOutput',false)));
+        cellCount = nansum(cell2mat( cellfun(@(x) str2double(x),loadDB.sessionList.Data(:,4),'UniformOutput',false)));
         loadDB.summaryText.String = [num2str(size(loadDB.sessionList.Data,1)),' session(s) with ', num2str(cellCount),' cells from ',num2str(length(unique(loadDB.sessionList.Data(:,5)))),' animal(s). Updated at: ', datestr(db.refreshTime)];
     end
 

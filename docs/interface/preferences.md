@@ -5,6 +5,10 @@ parent: Graphical interface
 nav_order: 4
 ---
 <style>
+.main-content dd{
+    margin: 0 0 0 210px  !important;
+    margin-left: 4em  !important;
+}
 dl {
     padding: 0.1em;
   }
@@ -19,7 +23,8 @@ dl {
     content: " ";
   }
   dd {
-    margin: 0 0 0 210px;
+    margin: 0 0 0 210px  !important;
+    margin-left: 4em  !important;
     padding: 0 0 0.5em 0;
   }
 </style>
