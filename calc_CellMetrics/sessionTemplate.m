@@ -6,7 +6,8 @@ function session = sessionTemplate(input1,varargin)
 %
 % - Example calls:
 % session = sessionTemplate(session)    % Load session from session struct
-% session = sessionTemplate(basepath)   % Load from basepath
+% session = sessionTemplate(basepath,'showGUI',true)   % Load from basepath and shows gui
+% session = sessionTemplate(basepath,'basename','name of session')
 
 % By Peter Petersen
 % petersen.peter@gmail.com
@@ -14,6 +15,7 @@ function session = sessionTemplate(input1,varargin)
 
 p = inputParser;
 addRequired(p,'input1',@(X) (ischar(X) && exist(X,'dir')) || isstruct(X)); % specify a valid path or an existing session struct
+addParameter(p,'basename',[],@isstr);
 addParameter(p,'importSkippedChannels',true,@islogical); % Import skipped channels from the xml as bad channels
 addParameter(p,'importSyncedChannels',true,@islogical); % Import channel not synchronized between anatomical and spike groups as bad channels
 addParameter(p,'noPrompts',true,@islogical); % Show the session gui if requested
@@ -21,6 +23,7 @@ addParameter(p,'showGUI',false,@islogical); % Show the session gui if requested
 
 % Parsing inputs
 parse(p,input1,varargin{:})
+basename = p.Results.basename;
 importSkippedChannels = p.Results.importSkippedChannels;
 importSyncedChannels = p.Results.importSyncedChannels;
 noPrompts = p.Results.noPrompts;
@@ -41,7 +44,10 @@ elseif isstruct(input1)
 end
 
 % Loading existing basename.session.mat file if exist
-[~,basename,~] = fileparts(basepath);
+if isempty(basename)
+    basename = basenameFromBasepath(basepath);
+%     [~,basename,~] = fileparts(basepath);
+end
 if ~exist('session','var') && exist(fullfile(basepath,[basename,'.session.mat']),'file')
     disp('Loading existing basename.session.mat file')
     session = loadSession(basepath,basename);
@@ -59,7 +65,7 @@ pathPieces = regexp(basepath, filesep, 'split'); % Assumes file structure: anima
 % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 % From the provided path, the session name, clustering path will be implied
 session.general.basePath =  basepath; % Full path
-session.general.name = pathPieces{end}; % Session name / basename
+session.general.name = basename; % Session name / basename
 session.general.version = 5; % Metadata version
 session.general.sessionType = 'Chronic'; % Type of recording: Chronic, Acute
 
@@ -81,7 +87,8 @@ end
 % This section will set some default extracellular parameters. You can comment this out if you are importing these parameters another way. 
 % Extracellular parameters from a Neuroscope xml and buzcode sessionInfo file will be imported as well
 if ~isfield(session,'extracellular') || (isfield(session,'extracellular') && (~isfield(session.extracellular,'sr')) || isempty(session.extracellular.sr))
-    session.extracellular.sr = 20000;           % Sampling rate
+    session.extracellular.sr = 20000;           % Sampling rate of raw data
+    session.extracellular.srLfp = 1250;         % Sampling rate of LFP data
     session.extracellular.nChannels = 64;       % number of channels
     session.extracellular.fileName = '';        % (optional) file name of raw data if different from basename.dat
     session.extracellular.electrodeGroups.channels = {[1:session.extracellular.nChannels]}; %creating a default list of channels. Please change according to your own layout. 
@@ -117,6 +124,7 @@ if ~isfield(session,'spikeSorting')
     % Verify that the path contains Kilosort and phy output files
     if exist(fullfile(basepath,relativePath,'spike_times.npy'),'file')
         % Phy and KiloSort 
+        disp('Spike sorting data detected: Phy')
         session.spikeSorting{1}.relativePath = relativePath;
         session.spikeSorting{1}.format = 'Phy';
         session.spikeSorting{1}.method = 'KiloSort';
@@ -125,6 +133,7 @@ if ~isfield(session,'spikeSorting')
         session.spikeSorting{1}.notes = '';
     elseif ~isempty(dir(fullfile(basepath,relativePath,[basename,'.res.*'])))
         % Klustakwik
+        disp('Spike sorting data detected: Klustakwik')
         session.spikeSorting{1}.relativePath = relativePath;
         session.spikeSorting{1}.format = 'Klustakwik';
         session.spikeSorting{1}.method = 'Klustakwik';
@@ -133,6 +142,7 @@ if ~isfield(session,'spikeSorting')
         session.spikeSorting{1}.notes = '';
     elseif exist(fullfile(basepath,relativePath,[basename, '.kwik']),'file')
         % KlustaViewa
+        disp('Spike sorting data detected: KlustaViewa')
         session.spikeSorting{1}.relativePath = relativePath;
         session.spikeSorting{1}.format = 'KlustaViewa';
         session.spikeSorting{1}.method = 'KlustaViewa';
@@ -141,6 +151,7 @@ if ~isfield(session,'spikeSorting')
         session.spikeSorting{1}.notes = '';
     elseif ~isempty(dir(fullfile(basepath,relativePath,['times_raw_elec_CH*.mat'])))
         % UltraMegaSort2000
+        disp('Spike sorting data detected: UltraMegaSort2000')
         session.spikeSorting{1}.relativePath = relativePath;
         session.spikeSorting{1}.format = 'UltraMegaSort2000';
         session.spikeSorting{1}.method = 'UltraMegaSort2000';
@@ -149,15 +160,13 @@ if ~isfield(session,'spikeSorting')
         session.spikeSorting{1}.notes = '';
     elseif ~isempty(dir(fullfile(basepath,relativePath,'TT*.mat')))
         % MClust
+        disp('Spike sorting data detected: MClust')
         session.spikeSorting{1}.relativePath = relativePath;
         session.spikeSorting{1}.format = 'MClust';
         session.spikeSorting{1}.method = 'MClust';
         session.spikeSorting{1}.channels = [];
         session.spikeSorting{1}.manuallyCurated = 1;
         session.spikeSorting{1}.notes = '';
-    else
-        disp('No spike sorting data detected')
-        
     end
 end
 
@@ -335,7 +344,11 @@ end
 % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 % Importing time series from intan metadatafile info.rhd
 % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-session = loadIntanMetadata(session);
+try
+    session = loadIntanMetadata(session);
+catch
+    warning('Failed to get intan metadata')
+end
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 % Importing Neuroscope xml parameters (skipped channels, dead channels, notes and experimenters)

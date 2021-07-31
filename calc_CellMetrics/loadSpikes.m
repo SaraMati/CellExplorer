@@ -1,7 +1,16 @@
 function spikes = loadSpikes(varargin)
-% Load clustered data from multiple pipelines [
-% Current supported formats: Phy (default), Klustakwik/Neurosuite, MClust, KlustaViewa, ALF, AllenSDK (nwb), UltraMegaSort2000, Wave_clus, Sebastien Royer's lab standard, 
-% Buzcode compatible output. Saves output to a basename.spikes.cellinfo.mat file
+% Load clustered data from multiple pipelines. Currently supported formats: 
+%      Phy (default)
+%      Klustakwik/Neurosuite
+%      MClust
+%      NWB,
+%      KlustaViewa
+%      ALF
+%      AllenSDK (via NWB files and their API data files)
+%      UltraMegaSort2000
+%      Wave_clus
+%      Sebastien Royer's lab standard
+%      custom (Spike timestamps as input)
 %
 % Please see the CellExplorer website: https://cellexplorer.org/datastructure/data-structure-and-format/#spikes
 %
@@ -11,7 +20,7 @@ function spikes = loadSpikes(varargin)
 %
 % OUTPUT
 %
-% spikes:               - Matlab struct following the buzcode standard (https://github.com/buzsakilab/buzcode)
+% spikes:               - Matlab struct described here: https://cellexplorer.org/datastructure/data-structure-and-format/#spikes
 %     .basename         - Name of recording file
 %     .sr               - Sampling rate
 %     .UID              - Unique identifier for each neuron in a recording
@@ -39,9 +48,10 @@ function spikes = loadSpikes(varargin)
 %
 %
 % EXAMPLE CALLS
-% spikes = loadSpikes('session',session);
+% spikes = loadSpikes('session',session); % clustering format should be specified in the struct
 % spikes = loadSpikes('basepath',pwd,'clusteringpath',Kilosort_RelativeOutputPath); % Run from basepath, assumes Phy format.
 % spikes = loadSpikes('basepath',pwd,'format','mclust'); % Run from basepath, loads MClust format.
+% spikes = loadSpikes('session',session,'UID',1:30,'shankID',1:3); % Filter and load spikes - only UID 1:30 and the first 3 shanks.
 
 % By Peter Petersen
 % petersen.peter@gmail.com
@@ -55,12 +65,13 @@ function spikes = loadSpikes(varargin)
 % 3.6 All waveforms across channels extracted from raw dat file
 % 3.7 Switched from xml to session struct for metadata
 % 3.8 Waveforn extraction separated into its own function
+% 4.1 Adding filter options (e.g. UID, shankID, cluID, region)
 
 p = inputParser;
 addParameter(p,'basepath',pwd,@ischar); % basepath with dat file, used to extract the waveforms from the dat file
-addParameter(p,'clusteringpath','',@ischar); % clustering path to spike data
-addParameter(p,'format','Phy',@ischar); % clustering format: [phy, klustakwik/neurosuite, KlustaViewa, Wave_clus, MClust, UltraMegaSort2000, ALF, AllenSDK]
-                                                  % TODO: 'SpyKING CIRCUS', 'MountainSort', 'IronClust'
+addParameter(p,'clusteringpath','',@ischar); % relativ clustering path to spike data (optional)
+addParameter(p,'format','Phy',@ischar); % clustering format: phy, klustakwik/neurosuite, KlustaViewa, NWB, Wave_clus, MClust, UltraMegaSort2000, ALF, AllenSDK
+                                                     % TODO: 'SpyKING CIRCUS', 'MountainSort', 'IronClust'
 addParameter(p,'basename','',@ischar); % The basename file naming convention
 addParameter(p,'shanks',nan,@isnumeric); % shanks: Loading only a subset of shanks (only applicable to Klustakwik)
 addParameter(p,'raw_clusters',false,@islogical); % raw_clusters: Load only a subset of clusters (might not work anymore as it has not been tested for a long time)
@@ -72,6 +83,15 @@ addParameter(p,'spikes',[],@isstruct); % Load existing spikes structure to appen
 addParameter(p,'LSB',0.195,@isnumeric); % Least significant bit (LSB in uV/bit) Intan = 0.195, Amplipex = 0.3815. (range/precision)
 addParameter(p,'session',[],@isstruct); % A buzsaki lab session struct
 addParameter(p,'labelsToRead',{'good'},@iscell); % allows you to load units with various labels, e.g. MUA or a custom label
+
+% Custom spike input
+addParameter(p,'spikes_times',{},@iscell); % allows you to load units with various labels, e.g. MUA or a custom label
+
+% Filters - All good cells are saved to the struct but the function output can be filtered by below fields
+addParameter(p,'UID',[],@isnumeric);
+addParameter(p,'shankID',[],@isnumeric);
+addParameter(p,'cluID',[],@isnumeric);
+addParameter(p,'region',[],@isstring); 
 
 parse(p,varargin{:})
 
@@ -85,6 +105,7 @@ spikes = p.Results.spikes;
 LSB = p.Results.LSB;
 session = p.Results.session;
 labelsToRead = p.Results.labelsToRead;
+spikes_times = p.Results.spikes_times;
 
 parameters = p.Results;
 % Loads parameters from a session struct
@@ -133,6 +154,15 @@ if parameters.forceReload
     session = loadClassicMetadata(session);
     
     switch lower(format)
+        case 'custom'
+            nCells = numel(spikes_times)
+            spikes.times = spikes_times;
+            for i = 1:nCells
+                spikes.UID(i) = i;
+                spikes.cluID(i) = i;
+                spikes.total(i) = length(spikes.times{i});
+            end
+            
         case 'phy' % Loading phy
             if ~exist('readNPY.m','file')
                 error('''readNPY.m'' is not in your path and is required to load the python data. Please download it here: https://github.com/kwikteam/npy-matlab.')
@@ -163,7 +193,7 @@ if parameters.forceReload
             elseif exist(filename2,'file')
                 filename = filename2;
             else
-                error('Phy: No cluster group file found')
+                error('Phy: No cluster group file found (cluster_group.tsv or cluster_groups.csv)')
             end
             delimiter = '\t';
             startRow = 2;
@@ -172,7 +202,7 @@ if parameters.forceReload
             dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,startRow-1, 'ReturnOnError', false);
             fclose(fileID);
             UID = 1;
-            tol_samples = session.extracellular.sr*8e-4; % 0.8 ms tolerance in timestamp units
+            tol_samples = session.extracellular.sr*5e-4; % 0.5 ms tolerance in timestamp units
             for i = 1:length(dataArray{1})
                 if raw_clusters == 0
                     if any(strcmpi(dataArray{2}{i},labelsToRead))
@@ -196,7 +226,11 @@ if parameters.forceReload
                             end
                             % New file data format of phy2
                             if exist('cluster_info','var')
-                                temp = find(cluster_info.id == spikes.cluID(UID));
+                                if isfield(cluster_info,'id')
+                                    temp = find(cluster_info.id == spikes.cluID(UID));
+                                else %in the recent(2021) version of Phy2: isfield(cluster_info,'cluster_id')
+                                    temp = find(cluster_info.cluster_id == spikes.cluID(UID));
+                                end
                                 spikes.maxWaveformCh(UID) = cluster_info.ch(temp); % max waveform channel
                                 spikes.maxWaveformCh1(UID) = cluster_info.ch(temp)+1; % index 1;
 %                                 spikes.phy_purity(UID) = cluster_info.purity(temp)+1; % cluster purity
@@ -317,7 +351,78 @@ if parameters.forceReload
             spikes.processinginfo.params.WaveformsSource = 'kilosort template';
             spikes.processinginfo.params.WaveformsFiltFreq = 500;
             
-        case {'allensdk'} % Allen institute's nwb data combined info from the allenSDK
+        case {'nwb'} % nwb datafile
+            disp('loadSpikes: Loading NWB data')
+            nwb_file = fullfile(session.general.basePath,[session.general.name,'.nwb']);
+            info = h5info(nwb_file);
+            fieldsToExtract = {'PT_ratio','amplitude','amplitude_cutoff','cluster_id','cumulative_drift','d_prime','firing_rate','id','isi_violations','isolation_distance','l_ratio','local_index','max_drift','nn_hit_rate','nn_miss_rate', ...
+                'peak_channel_id','presence_ratio','quality','recovery_slope','repolarization_slope','silhouette_score','snr','spike_amplitudes','spike_amplitudes_index','spike_times','spike_times_index','spread','velocity_above',...
+                'velocity_below','waveform_duration','waveform_halfwidth','waveform_mean','waveform_mean_index'};
+            spikes = [];
+            
+            for i = 1:numel(fieldsToExtract)
+                disp(['Loading ' fieldsToExtract{i},' (',num2str(i),'/',num2str(numel(fieldsToExtract)),')'])
+                if strcmp(fieldsToExtract{i},'spike_times')
+                    spike_data = h5read(nwb_file,['/units/','spike_times']);
+                    spike_data_index = h5read(nwb_file,['/units/','spike_times_index']);
+                    spikes.total = double([spike_data_index(1);diff(spike_data_index)]);
+                    index = [0;spike_data_index];
+                    for j = 1:numel(spike_data_index)
+                        spikes.times{j} = spike_data(index(j)+1:index(j+1));
+                    end
+                elseif strcmp(fieldsToExtract{i},'spike_amplitudes')
+                    spike_data = h5read(nwb_file,['/units/','spike_amplitudes']);
+                    spike_data_index = h5read(nwb_file,['/units/','spike_amplitudes_index']);
+                    index = [0;spike_data_index];
+                    for j = 1:numel(spike_data_index)
+                        spikes.amplitudes{j} = spike_data(index(j)+1:index(j+1));
+                    end
+                elseif strcmp(fieldsToExtract{i},'waveform_mean')
+                    spike_data = h5read(nwb_file,['/units/','waveform_mean']);
+                    spike_data_index = h5read(nwb_file,['/units/','waveform_mean_index']);
+                    index = [0;spike_data_index];
+                    for j = 1:numel(spike_data_index)
+                        spikes.waveform_mean{j} = spike_data(:,index(j)+1:index(j+1));
+                        spikes.waveform_mean_filt{j} = spikes.waveform_mean{j};
+                    end
+                elseif any(strcmp(fieldsToExtract{i},{'spike_times_index','waveform_mean_index','spike_amplitudes_index'}))
+                    % disp('Not imported')
+                elseif strcmp(fieldsToExtract{i},'cluster_id')
+                    spikes.cluID = double(h5read(nwb_file,['/units/',fieldsToExtract{i}]))';
+                elseif  strcmp(fieldsToExtract{i},'amplitude')
+                    spikes.peakVoltage = h5read(nwb_file,['/units/',fieldsToExtract{i}]);
+                elseif strcmp(fieldsToExtract{i},'peak_channel_id')
+                    % maxWaveformCh
+                    electrode_channel_id = double(h5read(nwb_file,'/general/extracellular_ephys/electrodes/id'));
+                    peak_channel_id = double(h5read(nwb_file,['/units/','peak_channel_id']));
+                    for j = 1:numel(peak_channel_id)
+                        spikes.maxWaveformCh1(j) = find(peak_channel_id(j) == electrode_channel_id);
+                    end
+                    spikes.maxWaveformCh = spikes.maxWaveformCh1-1;
+                    spikes.peak_channel_id = peak_channel_id';
+                else
+                    fieldData =  h5read(nwb_file,['/units/',fieldsToExtract{i}]);
+                    if isnumeric(fieldData)
+                        spikes.(fieldsToExtract{i}) = fieldData';
+                    else
+                        spikes.(fieldsToExtract{i}) = fieldData;
+                    end
+                end
+            end
+                        
+            spikes.numcells = numel(spikes.times);
+            
+            spikes.processinginfo.params.WaveformsSource = 'nwb';
+            
+            % Flipping dimensions on fields if necessary
+            spikesFields = fieldnames(spikes);
+            for j = 1:numel(spikesFields)
+                if size(spikes.(spikesFields{j})) == [spikes.numcells,1]
+                    spikes.(spikesFields{j}) = spikes.(spikesFields{j})';
+                end
+            end
+            
+        case {'allensdk'} % Allen institute's nwb data combined with info from the allenSDK
             disp('loadSpikes: Loading Allen SDK nwb data')
             nwb_file = fullfile(session.general.basePath,[session.general.name,'.nwb']);
             info = h5info(nwb_file);
@@ -531,9 +636,12 @@ if parameters.forceReload
                 cluster_index = cluster_index(2:end);
                 nb_clusters = unique(cluster_index);
                 nb_clusters2 = nb_clusters(nb_clusters > 1);
+                
+                tol_samples = session.extracellular.sr*5e-4; % 0.5 ms tolerance in timestamp units
                 for i = 1:length(nb_clusters2)
                     UID = UID +1;
                     spikes.ts{UID} = time_stamps(cluster_index == nb_clusters2(i));
+                    [spikes.ts{UID},~] = uniquetol(spikes.ts{UID},tol_samples,'DataScale',1); % unique values within tol (<= 0.8ms)
                     spikes.times{UID} = spikes.ts{UID}/session.extracellular.sr;
                     spikes.shankID(UID) = shank;
                     spikes.cluID(UID) = nb_clusters2(i);
@@ -565,11 +673,13 @@ if parameters.forceReload
                 cluster_index = double(hdf5read([clusteringpath_full, basename, '.kwik'], ['/channel_groups/' num2str(shank-1) '/spikes/clusters/main']));
                 waveforms = double(hdf5read([clusteringpath_full, basename, '.kwx'], ['/channel_groups/' num2str(shank-1) '/waveforms_filtered']));
                 clusters = unique(cluster_index);
+                tol_samples = session.extracellular.sr*5e-4; % 0.5 ms tolerance in timestamp units
                 for i = 1:length(clusters(:))
                     cluster_type = double(hdf5read([clusteringpath_full, basename, '.kwik'], ['/channel_groups/' num2str(shank-1) '/clusters/main/' num2str(clusters(i)),'/'],'cluster_group'));
                     if cluster_type == 2
                         indexes{UID} = UID*ones(sum(cluster_index == clusters(i)),1);
                         spikes.ts{UID} = spike_times(cluster_index == clusters(i))+recording_nb(cluster_index == clusters(i))*40*40000;
+                        [spikes.ts{UID},~] = uniquetol(spikes.ts{UID},tol_samples,'DataScale',1); % unique values within tol (<= 0.8ms)
                         spikes.times{UID} = spikes.ts{j}/session.extracellular.sr;
                         spikes.total(UID) = sum(cluster_index == clusters(i));
                         spikes.shankID(UID) = shank;
@@ -633,7 +743,7 @@ if parameters.forceReload
                 UID = UID+1;
             end
             
-        case {'wave_clus'}            
+        case {'wave_clus'}
             UID = 1;
             fileList = dir(fullfile(clusteringpath_full,'times_*.mat'));
             fileList = {fileList.name};
@@ -679,7 +789,7 @@ if parameters.forceReload
     
     % Attaching info about how the spikes structure was generated
     spikes.processinginfo.function = 'loadSpikes';
-    spikes.processinginfo.version = 3.9;
+    spikes.processinginfo.version = 4.1;
     spikes.processinginfo.date = now;
     spikes.processinginfo.params.forceReload = parameters.forceReload;
     spikes.processinginfo.params.shanks = shanks;
@@ -709,6 +819,19 @@ if parameters.forceReload
             end
         catch
             warning('Spikes could not be saved')
+        end
+    end
+end
+
+filteredFields = {'UID','shankID','cluID','region'};
+for i = 1:numel(filteredFields)
+    if ~isempty(parameters.(filteredFields{i}))
+        if isfield(spikes, filteredFields{i})
+            toRemove = ~ismember(spikes.(filteredFields{i}),parameters.(filteredFields{i}));
+            
+            spikes = removeCells(toRemove,spikes);
+        else
+            warning(['The filtered field does not exist in the spikes struct: ' filteredFields{i}])
         end
     end
 end
@@ -775,4 +898,21 @@ if isfield(sessionInfo,'AnatGrps') && isfield(sessionInfo.AnatGrps,'Skip')
         session.channelTags.Bad.channels = channelOrder(skip);
     end
 end
+end
+
+function spikes = removeCells(UIDsToRemove,spikes)
+    % Function to remove cells from the structure. toRemove is the INDEX of the UID in spikes.UID
+    % Functionaloty taken from Buzcode but altered to include all fields.
+    
+    fields2clean = fieldnames(spikes);
+    for i = 1:numel(fields2clean)
+        if (iscell(spikes.(fields2clean{i})) || isnumeric(spikes.(fields2clean{i}))) && numel(spikes.(fields2clean{i})) == spikes.numcells
+            % Cleaning only cell array- and numeric fields
+            spikes.(fields2clean{i})(UIDsToRemove) = [];
+        end
+    end 
+    if ~isfield(spikes,'numcells_orig')
+        spikes.numcells_orig = spikes.numcells;
+    end
+    spikes.numcells = sum(~UIDsToRemove);
 end

@@ -52,7 +52,7 @@ The significance matrix can help quantify the modality of your data, e.g. using 
 The colors in the matrix signify significance level (right color bar in log10), `*` signifies p<0.05 and `**` signifies p<0.001. Selected metrics are shown on the left side of the matrix. Significance levels is determined using [Two-sample Kolmogorov-Smirnov test](https://www.mathworks.com/help/stats/kstest2.html) (a nonparametric hypothesis test).
 
 ### Share cell metrics in your publications or with your peers
-You can save your combined cell metrics from a study into a single mat file that can be shared together with a publication. This allows peers to verify your classification or use your cell metrics directly. You can save the mat file from CellExplorer from the menu `File` -> `Save classification`.
+You can save your combined cell metrics from a study into a single mat file that can be shared together with a publication. This allows peers to verify your classification or use your cell metrics directly. You can save the mat file from CellExplorer from the menu `File` -> `Save`.
 
 ### Export figures
 Figures can be exported using the GUI, either the main CellExplorer window or through cell selection actions dialog. For more information please see the [figure export tutorial]({{"/tutorials/export-figure/"|absolute_url}}).
@@ -65,4 +65,4 @@ A supplementary figure can be created for publications as shown below. From the 
 CellExplorer can handle batches of sessions. It will load metrics into one struct allowing you to visualize and classify your data across recordings and classify cells across sessions, while still maintaining the data handling on a single session level, writing your changes back to the original files. You can save metrics from a batch of sessions, and still load the data back into CellExplorer.
 
 ### Track changes and autosave
-CellExplorer tracks your actions, which includes cell-type classifications, deep-superficial assignment, brain regions, labels, tags, groups and ground truth classifications. Reverse an action by pressing `ctrl+Z`. Further it autosaves your actions to your workspace every 6th action (You can turn the autosave feature off or adjust the autosave-interval in preferences). You still have to save your changes to the original cell_metrics file through the interface.
+CellExplorer tracks user-actions, which includes cell-type classifications, deep-superficial assignment, brain regions, labels, tags, groups and ground truth classifications. Reverse most recent action by pressing `ctrl+Z`. Further it autosaves your actions to your workspace every 6th action (You can turn the autosave feature off or adjust the autosave-interval in preferences). You still have to save your changes to the original cell_metrics file through the interface.

@@ -141,12 +141,6 @@ Any extra field can be added with info about the units, e.g. the theta phase of 
 ### Cell metrics
 The cell metrics are kept in a `cell_metrics` struct as [described here]({{"/datastructure/standard-cell-metrics/"|absolute_url}}). The cell metrics are stored in: `basename.cell_metrics.cellinfo.mat`.
 
-### Firing rate maps
-This is a data container for firing rate map data. A MATLAB struct `ratemap` containing 1D or linearized firing rat maps, stored in a .mat file: `basename.ratemap.firingRateMap.mat`. The firing rate maps have the following fields:
-* `map`: a 1xN cell-struct for N units each containing a KxL matrix, where K corresponds to the bin count and L to the number of states. States can be trials, manipulation states, left-right states, etc.
-* `x_bins`: a 1xK vector with K bin values used to generate the firing rate map.
-* `state_labels`: a 1xL vector with char labels describing the states.
-
 ### Events
 This is a data container for event data. A MATLAB struct `eventName` stored in a .mat file: `basename.eventName.events.mat` with the following fields:
 * `timestamps`: Px2 matrix with intervals for the P events in seconds.
@@ -189,20 +183,22 @@ The `*.channelinfo.mat` files should be stored in the basepath.
 
 __Channels coordinates__
 `chanCoords` : Channels coordinates struct (probe layout) with x and y position for each recording channel saved to `basename.chanCoords.channelinfo.mat` with the following fields:
-  * `channel` : Channel list (Qx1).
   * `x` : x position of each channel (in µm; Qx1).
   * `y` : y position of each channel (in µm; Qx1).
-
-This works as a simple 2D representation of recordings and will help you determine the location of your neurons. It is also used to determine the spike amplitude length constant of the spike waveforms across channels. 
+  * `source` : y position of each channel (in µm; Qx1; optional).
+  * `layout` : y position of each channel (in µm; Qx1; optional).
+  * `shankSpacing` : y position of each channel (in µm; Qx1; optional).
+  * `channel` : Channel list (Qx1; optional).
+This works as a simple 2D representation of recordings and will help you determine the location of your neurons. It is also used to determine the spike amplitude length constant of the spike waveforms across channels.
 
 __Allen Institute's Common Coordinate Framework__
-`ccf` : Allen Institute's Common Coordinate Framework for each recording channel saved to  `basename.ccf.channelinfo.mat` with the following fields:
-  * `channel` : Channel list (Qx1).
-  * `ap` : anterior-posterior position of each channel (µm; Qx1).
-  * `dv` : dorsol-ventral position of each channel (µm; Qx1).
-  * `lr` : left-right position of each channel (µm; Qx1).
+`ccf` : Allen Institute's Common Coordinate Framework (CCF) for each recording channel saved to  `basename.ccf.channelinfo.mat` with the following fields:
+  * `x` : Anterior-Posterior position of each channel (µm; Qx1).
+  * `y` : Superior-Inferior position of each channel (µm; Qx1).
+  * `z` : Left-Right position of each channel (µm; Qx1; right hemisphere positive direction).
+  * `channel` : Channel list (Qx1; optional).
 
-The Allen Institute's Common Coordinate Frame allows you to visualize your cells into a standardized mouse atlas. 
+The Allen Institute's Common Coordinate Frame allows you to visualize your cells into the standardized mouse atlas.
 
 ### Time series
 This is a data container for other time series data (check other containers for specific formats like intracellular). A MATLAB struct `timeserieName` stored in a .mat file: `basename.timeserieName.timeseries.mat` with the following fields:
@@ -241,20 +237,17 @@ Any other field can be added to the struct containing states data. The `*.states
 This is a data container for behavioral tracking data. A MATLAB struct `behaviorName` stored in a .mat file: `basename.behaviorName.behavior.mat` with the following fields:
 * `timestamps`:  array of timestamps that match the data subfields (in seconds).
 * `sr`: sampling rate (Hz).
-* SpatialSeries: several options as defined below, each with optional subfields:
+* SpatialSeries: several options (position, pupil, orientation) as defined below, each with optional subfields:
   * `units`: defines the units of the data.
   * `resolution`: The smallest meaningful difference (in specified unit) between values in data.
   * `referenceFrame`: description defining what the zero-position is.
   * `coordinateSystem`: position: cartesian[default] or polar. orientation: euler or quaternion[default].
-* `position`: spatial position defined by: x, x/y or x/y/z axis default units: meters).
+* `position`: .x, .y, and .z spatial position. Default units: cm.
+  * `linearized`: a projection of spatial parameters into a 1 dimensional representation:
 * `speed`: a 1D representation of the running speed (cm/s).
+* `acceleration`: a 1D representation of the acceleration (cm^2/s).
 * `orientation`: .x, .y, .z, and .w (default units: radians)
 * `pupil`: pupil-tracking data: .x, .y, .diameter.
-* `linearized`: a projection of spatial parameters into a 1 dimensional representation:
-  * `position`: a 1D linearized version of the position data. 
-  * `speed`: behavioral speed of the linearized behavior. 
-  * `acceleration`: behavioral acceleration of the linearized behavior.
-* `events`: behaviorally derived events, .e.g. as an animal passed a specific position or consumes reward. 
 * `epochs`: behaviorally derived epochs.
 * `trials`: behavioral trials defined as intervals or continuous vector with numeric trial numbers.
 * `states`: e.g. spatially defined regions like central arm or waiting area in a maze. Can be binary or numeric.
@@ -266,6 +259,7 @@ This is a data container for behavioral tracking data. A MATLAB struct `behavior
 
 Any other field can be added to the struct containing behavior data. The `*.behavior.mat` files should be stored in the basepath.
 
+
 ### Trials
 A MATLAB struct `trials` stored in a .mat file: `basename.trials.behavior.mat`. The trials struct is a special behavior struct centered around behavioral trials. `trials` has the following fields:
 * `start`: trial start times in seconds.
@@ -276,7 +270,16 @@ A MATLAB struct `trials` stored in a .mat file: `basename.trials.behavior.mat`. 
 * `timeSeries`: can contain any derived time traces averaged onto trial e.g. temperature. Use nan values for undefined trials.
 * `processinginfo`: a struct with information about how the .mat file was generated including the name of the function, version, date and parameters.
 
-Any other field can be added to the struct containing trial-specified data. The `trials.behavior.mat` files should be stored in the basepath. Trialwise data should live in this container, while trial-intervals can be stored in other behavior structs.
+Any other field can be added to the struct containing trial-specified data. The `trials.behavior.mat` files should be stored in the basepath. Trial-wise data should live in this container, while trial-intervals can be stored in other behavior structs.
+
+### Firing rate maps
+This is a data container for firing rate map data. A MATLAB struct `ratemap` containing 1D or linearized firing rat maps, stored in a .mat file: `basename.ratemap.firingRateMap.mat`. The firing rate maps have the following fields:
+* `map`: a 1xN cell-struct for N units each containing a KxL matrix, where K corresponds to the bin count and L to the number of states. States can be trials, manipulation states, left-right states, etc.
+* `x_bins`: a 1xK vector with K bin values used to generate the firing rate map.
+* `x_label`: a 1xL vector with names of the states.
+* `stateNames`: a 1xL vector with names of the states.
+* `boundaries`: a 1xL vector with spatial boundaries.
+* `boundaryNames`: a 1xL vector with labels for the boundaries.
 
 ### Intracellular time series
 This is a data container for intracellular recordings. Any MATLAB struct `intracellularName` containing intracellular data would be stored in a .mat file: `basename.intracellularName.intracellular.mat`. It contains fields inherited from timeSeries with the following fields:

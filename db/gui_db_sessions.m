@@ -1,5 +1,5 @@
-function [basenames,basepaths,exitMode] = gui_db_sessions(basenames_in)
-    % Shows a list of sessions ffrom the Buzsaki lab databank
+function [basenames,basepaths,exitMode] = gui_db_sessions(basenames_in,textfilter)
+    % Shows a list of sessions from the Buzsaki lab databank
     % This function is part of CellExplorer
     %
     % Example call
@@ -46,6 +46,11 @@ function [basenames,basepaths,exitMode] = gui_db_sessions(basenames_in)
     if exist('basenames_in','var') && ~isempty(basenames_in)
         loadDB.sessionList.Data(ismember(loadDB.sessionList.Data(:,3),basenames_in),1) = {true};
     end
+    if exist('textfilter','var') && ~isempty(textfilter)
+        loadDB.popupmenu.filter.String = textfilter;
+        Button_DB_filterList
+    end
+        
     movegui(loadDB.dialog,'center')
 %         set(loadDB.dialog,'visible','on')
     uicontrol(loadDB.popupmenu.filter)
@@ -75,7 +80,15 @@ function [basenames,basepaths,exitMode] = gui_db_sessions(basenames_in)
         end
 
         if loadDB.popupmenu.sorting.Value == 2 % Cell count
-            cellCount = cell2mat( cellfun(@(x) x.spikeSorting.cellCount,db.sessions,'UniformOutput',false));
+            cellCount = [];
+            for i = 1:numel(db.sessions)
+                if ~isempty(db.sessions{i}.spikeSorting.cellCount)
+                cellCount(i) = db.sessions{i}.spikeSorting.cellCount;
+                else
+                    cellCount(i) = 0;
+                end
+            end
+%             cellCount = cell2mat( cellfun(@(x) x.spikeSorting.cellCount,db.sessions,'UniformOutput',false));
             [~,idx2] = sort(cellCount(db.index),'descend');
         elseif loadDB.popupmenu.sorting.Value == 3 % Animal
             [~,idx2] = sort(db.animals(db.index));

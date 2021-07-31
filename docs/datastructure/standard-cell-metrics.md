@@ -72,13 +72,32 @@ $$
   * `filt`: Average filtered spike waveform from channel with max amplitude. High-pass filtered above 500Hz to standardize waveforms.
   * `raw`: Average raw spike waveform from channel with max amplitude. 
   * `time`: Time vector for average raw spike waveform from channel with max amplitude.
-* `maxWaveformCh`: Max channel zero-indexed: The channel where the spike has the largest amplitude.
-* `maxWaveformCh1`: Max channel one-indexed: The channel where the spike has the largest amplitude.
+  * `filt_std`: Std of the the filtered spike waveform from channel with max amplitude.
+  * `raw_std`: Std of the the raw spike waveform from channel with max amplitude.
+  * `filt_all`: Filtered spike waveform from all/subset of channel. 
+  * `raw_all`: Filtered spike waveform from all/subset of channel. 
+  * `channels_all`: List of channels used in `filt_all` and `raw_all.` Default: 1:nChannels.
+* `maxWaveformCh`: Max channel zero-indexed: The channel with the largest amplitude.
+* `maxWaveformCh1`: Max channel one-indexed: The channel with the largest amplitude.
 * `troughToPeak`: Trough-to-peak latency is defined from the trough to the following peak of the waveform. 
 * `ab_ratio`: Waveform asymmetry; the ratio between the two positive peaks `(peakB-peakA)/(peakA+peakB)`.
-* `peakVoltage`: Peak voltage (µV) Defined from the channel with the maximum waveform (high-pass filtered). `max(waveform)-min(waveform)`.
+* `peakVoltage`: Peak voltage (µV) Defined from the channel with the maximum high-pass filtered waveform. `max(waveform)-min(waveform)`.
 
 <p align="center"><img src="https://buzsakilab.com/wp/wp-content/uploads/2020/01/WaveformFeatures.png" width="50%"></p>
+
+### Channel maps
+Two channel maps are currently supported by CellExplorer, that are determined from the amplitude of the average waveform across channels.
+
+* Trilaterated channel coordinates. 
+  * `cell_metrics.trilat_x`: x coordinate in µm.
+  * `cell_metrics.trilat_y`: y coordinate in µm.
+
+* Common coordinate framework (CCF; by the Allen Institute). Also determined by trilateration. 
+  * `cell_metrics.ccf_x`: x coordinate in µm.
+  * `cell_metrics.ccf_y`: y coordinate in µm.
+  * `cell_metrics.ccf_z`: z coordinate in µm.
+
+Please see the [channel maps tutorial](https://cellexplorer.org/tutorials/channel-maps-tutorial/) for how to generate the channel maps.
 
 ## Cell-type classification
 * `putativeCellType`: Putative cell types. [See the dedicated page about cell-type classification]({{"/pipeline/cell-type-classification/"|absolute_url}}).
