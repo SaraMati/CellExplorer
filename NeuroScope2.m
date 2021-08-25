@@ -1,8 +1,9 @@
 function NeuroScope2(varargin)
 % % % % % % % % % % % % % % % % % % % % % % % % %
 % NeuroScope2 (BETA) is a visualizer for electrophysiological recordings. It is inspired by the original Neuroscope (http://neurosuite.sourceforge.net/)
-% and made to mimic its features, but built upon Matlab and the data structure of CellExplorer, making it much easier to hack/customize, fully
-% support Matlab mat-files, and faster than the original NeuroScope. NeuroScope2 is part of CellExplorer - https://CellExplorer.org/
+% and made to mimic its features, but built upon Matlab and the data structure of CellExplorer, making it much easier to hack/customize, 
+% and faster than the original NeuroScope. NeuroScope2 is part of CellExplorer - https://CellExplorer.org/
+% https://cellexplorer.org/interface/neuroscope2/
 %
 % Major features:
 % - Live trace filter with spike and event detection, single channel spectrogram
@@ -138,7 +139,11 @@ trackGoogleAnalytics('NeuroScope2',1);
 % Saving session metadata
 if UI.settings.saveMetadata
     session = data.session;
-    saveStruct(session,'session','commandDisp',false);
+    try
+        saveStruct(session,'session','commandDisp',false);
+    catch
+        warning('Could not save session struct to basepath when closing NeuroScope2')
+    end
 end
 
 % % % % % % % % % % % % % % % % % % % % % %
@@ -179,6 +184,9 @@ end
         UI.settings.channelList = [];
         UI.settings.brainRegionsToHide = [];
         UI.settings.removeDC = false;
+        UI.settings.showScalebar = false;
+        UI.settings.narrowPadding = false;
+        UI.settings.ephys_padding = 0.05; % Initial padding above and below ephys traces
         
         % Only Matlab 2020b and forward support vertical markers unfortunately
         if verLessThan('matlab','9.9') 
@@ -341,6 +349,9 @@ end
         % UI.menu.display.channelCSD = uimenu(UI.menu.display.topMenu,menuLabel,'Show Current Source density (CSD)',menuSelectedFcn,@show_CSD);
         UI.menu.display.removeDC = uimenu(UI.menu.display.topMenu,menuLabel,'Remove DC from signal',menuSelectedFcn,@removeDC);
         UI.menu.display.ShowChannelNumbers = uimenu(UI.menu.display.topMenu,menuLabel,'Show channel numbers',menuSelectedFcn,@ShowChannelNumbers);
+        UI.menu.display.showScalebar = uimenu(UI.menu.display.topMenu,menuLabel,'Show scale bar',menuSelectedFcn,@showScalebar);
+        UI.menu.display.narrowPadding = uimenu(UI.menu.display.topMenu,menuLabel,'Narrow ephys padding',menuSelectedFcn,@narrowPadding);
+
         %UI.menu.display.columnTraces = uimenu(UI.menu.display.topMenu,menuLabel,'Multiple columns',menuSelectedFcn,@columnTraces);
         UI.menu.display.changeColormap = uimenu(UI.menu.display.topMenu,menuLabel,'Change colormap of ephys traces',menuSelectedFcn,@changeColormap,'Separator','on');
         UI.menu.display.changeSpikesColormap = uimenu(UI.menu.display.topMenu,menuLabel,'Change colormap of spikes',menuSelectedFcn,@changeSpikesColormap);
@@ -988,6 +999,12 @@ end
                 text(-0.001*UI.settings.windowDuration*ones(1,numel(UI.channelOrder)),-UI.channelOffset(UI.channelOrder),cellstr(num2str(UI.channelOrder')),'color','w','VerticalAlignment', 'middle','HorizontalAlignment','right','HitTest','off')
             end
         end
+        
+        % Plotting scale bar
+        if UI.settings.showScalebar
+            plot(UI.plot_axis1,[0.005,0.005],[0.93,0.98],'-','linewidth',3,'color',UI.settings.xtickColor)
+            text(UI.plot_axis1,0.005,0.955,['  ',num2str(0.05/(UI.settings.scalingFactor)*1000,3),' mV'],'FontWeight', 'Bold','VerticalAlignment', 'middle','HorizontalAlignment','left','color',UI.settings.xtickColor)
+        end
         ephys.plotted = true;
     end
 
@@ -1275,7 +1292,7 @@ end
                                 % populationRate = smooth(populationRate,UI.settings.populationRateSmoothing);
                                 populationRate = conv(populationRate,gausswin(UI.settings.populationRateSmoothing)'/sum(gausswin(UI.settings.populationRateSmoothing)),'same');
                             end
-                            populationRate = (populationRate/max(populationRate))*diff(UI.dataRange.populationRate)+UI.dataRange.populationRate(1);
+                            populationRate = (populationRate/max(populationRate))*diff(UI.dataRange.populationRate)+UI.dataRange.populationRate(1)+0.001;
                             line(populationBins, populationRate,'Marker','none','LineStyle','-','color',UI.colors_metrics(i,:), 'HitTest','off','linewidth',1.5);
                         end
                     end
@@ -1291,7 +1308,7 @@ end
                         % populationRate = smooth(populationRate,UI.settings.populationRateSmoothing);
                         populationRate = conv(populationRate,gausswin(UI.settings.populationRateSmoothing)'/sum(gausswin(UI.settings.populationRateSmoothing)),'same');
                     end
-                    populationRate = (populationRate/max(populationRate))*diff(UI.dataRange.populationRate)+UI.dataRange.populationRate(1);
+                    populationRate = (populationRate/max(populationRate))*diff(UI.dataRange.populationRate)+UI.dataRange.populationRate(1)+0.001;
                     line(populationBins, populationRate,'Marker','none','LineStyle','-','color','w', 'HitTest','off','linewidth',1.5);
                 end
             end
@@ -1920,6 +1937,29 @@ end
         uiresume(UI.fig);
     end
     
+    function showScalebar(~,~)
+        UI.settings.showScalebar = ~UI.settings.showScalebar;
+        if UI.settings.showScalebar
+            UI.menu.display.showScalebar.Checked = 'on';
+        else
+            UI.menu.display.showScalebar.Checked = 'off';
+        end
+        uiresume(UI.fig);
+    end
+    
+    function narrowPadding(~,~)
+        UI.settings.narrowPadding = ~UI.settings.narrowPadding;
+        if UI.settings.narrowPadding
+            UI.settings.ephys_padding = 0.015;
+            UI.menu.display.narrowPadding.Checked = 'on';
+        else
+            UI.settings.ephys_padding = 0.05;
+            UI.menu.display.narrowPadding.Checked = 'off';
+        end
+        initTraces
+        uiresume(UI.fig);
+    end
+    
     function show_CSD(~,~)
         if UI.panel.csd.showCSD.Value == 1
             UI.settings.CSD.show = true;
@@ -2163,7 +2203,12 @@ end
     function setWindowsSize(~,~)
         % Set the window size
         string1 = str2num(UI.elements.lower.windowsSize.String);
-        if isnumeric(string1) & string1>0 & string1<100
+        if isnumeric(string1) 
+            if string1 < 0.001
+                string1 = 1;
+            elseif string1 > 100
+                string1 = 100;
+            end
             UI.settings.windowDuration = round(string1*1000)/1000;
             UI.elements.lower.windowsSize.String = num2str(UI.settings.windowDuration);
             initTraces
@@ -2176,6 +2221,7 @@ end
         % Increase the window size
         windowSize_old = UI.settings.windowDuration;
         UI.settings.windowDuration = min([UI.settings.windowDuration*2,100]);
+        UI.elements.lower.windowsSize.String = num2str(UI.settings.windowDuration);
         initTraces
         UI.forceNewData = true;
         uiresume(UI.fig);
@@ -2185,6 +2231,7 @@ end
         % Decrease the window size
         windowSize_old = UI.settings.windowDuration;
         UI.settings.windowDuration = max([UI.settings.windowDuration/2,0.125]);
+        UI.elements.lower.windowsSize.String = num2str(UI.settings.windowDuration);
         initTraces
         UI.forceNewData = true;
         uiresume(UI.fig);
@@ -2764,7 +2811,8 @@ end
         [~,temp] = sort([data.session.extracellular.electrodeGroups.channels{:}]);
         channels_1 = [data.session.extracellular.electrodeGroups.channels{:}];
         UI.channelMap(channels_1(find(idx))) = channels(idx2(idx2~=0));
-        padding = 0.05 + 0.5./numel(UI.channelOrder);
+        padding = UI.settings.ephys_padding + 0.5./numel(UI.channelOrder);
+        
         if nChannelsToPlot == 1
         	channelOffset = 0.5;
         elseif nChannelsToPlot == 0
@@ -2815,6 +2863,7 @@ end
                 initTraces
             end
         end
+        
         if exist('parameters','var') &&~isempty(parameters.events)
             idx = find(strcmp(parameters.events,UI.panel.events.files.String));
             if ~isempty(idx)
@@ -3058,10 +3107,12 @@ end
             delete(UI.menu.file.recentSessions.ops);
             UI.menu.file.recentSessions.ops = [];
         end
-        for i = min([numel(recentSessions.basepaths),15]):-1:1
-            UI.menu.file.recentSessions.ops(i) = uimenu(UI.menu.file.recentSessions.main,menuLabel,fullfile(recentSessions.basepaths{i}, recentSessions.basenames{i}),menuSelectedFcn,@loadFromRecentFiles);
+        for i = 1:min([numel(recentSessions.basepaths),15])
+            UI.menu.file.recentSessions.ops(i) = uimenu(UI.menu.file.recentSessions.main,menuLabel,fullfile(recentSessions.basepaths{end-i+1}, recentSessions.basenames{end-i+1}),menuSelectedFcn,@loadFromRecentFiles);
         end
-        save(fullfile(CellExplorer_path,'data_NeuroScope2.mat'),'recentSessions');
+        try
+            save(fullfile(CellExplorer_path,'data_NeuroScope2.mat'),'recentSessions');
+        end
     end
 
     function moveSlider(src,~)
@@ -4283,10 +4334,9 @@ end
                     maxCh1(mask) = maxCh1(mask)+1; 
                 end                
                 
-                ind_group = find(ismember({info.Groups.Name},{'/spiketimes'})); % find the index of the '/spiketimes' field
                 for i = 1: N_templates % which is equal to length(info.Groups(4).Datasets) = number of templates
-                    spikes.times{i} = double(h5read(result_file,['/spiketimes/',info.Groups(ind_group).Datasets(i).Name]))/data.session.extracellular.sr;
-                    template_number = str2double(erase(info.Groups(ind_group).Datasets(i).Name,'temp_'));
+                    spikes.times{i} = double(h5read(result_file,['/spiketimes/',info.Groups(4).Datasets(i).Name]))/data.session.extracellular.sr;
+                    template_number = str2double(erase(info.Groups(4).Datasets(i).Name,'temp_'));
                     spikes.cluID(i) = template_number+1; %plus one since temps start with temp_0
                     spikes.total(i) = length(spikes.times{i});
                     spikes.maxWaveformCh1(i)=maxCh1(i); %preferred_electrodes(i);
@@ -4407,8 +4457,10 @@ end
         text(UI.plot_axis1,1,1,['Start time: ', num2str(t0), ' sec, Duration: ', num2str(UI.settings.windowDuration), ' sec '],'FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','right','color',UI.settings.xtickColor,'Units','normalized')
         
         % Adding scalebar
-        plot([0.005,0.005],[0.93,0.98],'-','linewidth',3,'color',UI.settings.xtickColor)
-        text(UI.plot_axis1,0.005,0.955,['  ',num2str(0.05/(UI.settings.scalingFactor)*1000,3),' mV'],'FontWeight', 'Bold','VerticalAlignment', 'middle','HorizontalAlignment','left','color',UI.settings.xtickColor)
+        if ~UI.settings.showScalebar
+            plot(UI.plot_axis1,[0.005,0.005],[0.93,0.98],'-','linewidth',3,'color',UI.settings.xtickColor)
+            text(UI.plot_axis1,0.005,0.955,['  ',num2str(0.05/(UI.settings.scalingFactor)*1000,3),' mV'],'FontWeight', 'Bold','VerticalAlignment', 'middle','HorizontalAlignment','left','color',UI.settings.xtickColor)
+        end
         drawnow
         if strcmp(src.Text,'Export to .png file (image)')
             if ~verLessThan('matlab','9.8') 
@@ -4458,7 +4510,7 @@ end
         color_idx = find(strcmp(UI.settings.colormap,colormapList));
         
         colormap_dialog = dialog('Position', [0, 0, 300, 350],'Name','Change colormap','visible','off'); movegui(colormap_dialog,'center'), set(colormap_dialog,'visible','on')
-        colormap_uicontrol = uicontrol('Parent',colormap_dialog,'Style', 'ListBox', 'String', colormapList, 'Position', [10, 50, 280, 270],'Value',color_idx,'Callback',@(src,evnt)previewColormap);
+        colormap_uicontrol = uicontrol('Parent',colormap_dialog,'Style', 'ListBox', 'String', colormapList, 'Position', [10, 50, 280, 270],'Value',color_idx,'Max',1,'Min',1,'Callback',@(src,evnt)previewColormap);
         uicontrol('Parent',colormap_dialog,'Style','pushbutton','Position',[10, 10, 135, 30],'String','OK','Callback',@(src,evnt)close_dialog);
         uicontrol('Parent',colormap_dialog,'Style','pushbutton','Position',[155, 10, 135, 30],'String','Cancel','Callback',@(src,evnt)cancel_dialog);
         uicontrol('Parent',colormap_dialog,'Style', 'text', 'String', 'Colormaps', 'Position', [10, 320, 280, 20],'HorizontalAlignment','left');
@@ -4493,9 +4545,11 @@ end
         function previewColormap
             % Previewing colormap
             idx = colormap_uicontrol.Value;
-            colormap_preview = colormapList{idx};
-            UI.colors = eval([colormap_preview,'(',num2str(data.session.extracellular.nElectrodeGroups),')']);
-            plotData;
+            if ~isempty(idx)
+                colormap_preview = colormapList{idx};
+                UI.colors = eval([colormap_preview,'(',num2str(data.session.extracellular.nElectrodeGroups),')']);
+                plotData;
+            end
         end
     end
     
@@ -4505,7 +4559,7 @@ end
         color_idx = find(strcmp(UI.settings.spikesColormap,colormapList));
         
         colormap_dialog = dialog('Position', [0, 0, 300, 350],'Name','Change colormap','visible','off'); movegui(colormap_dialog,'center'), set(colormap_dialog,'visible','on')
-        colormap_uicontrol = uicontrol('Parent',colormap_dialog,'Style', 'ListBox', 'String', colormapList, 'Position', [10, 50, 280, 270],'Value',color_idx,'Callback',@(src,evnt)previewColormap);
+        colormap_uicontrol = uicontrol('Parent',colormap_dialog,'Style', 'ListBox', 'String', colormapList, 'Position', [10, 50, 280, 270],'Value',color_idx,'Max',1,'Min',1,'Callback',@(src,evnt)previewColormap);
         uicontrol('Parent',colormap_dialog,'Style','pushbutton','Position',[10, 10, 135, 30],'String','OK','Callback',@(src,evnt)close_dialog);
         uicontrol('Parent',colormap_dialog,'Style','pushbutton','Position',[155, 10, 135, 30],'String','Cancel','Callback',@(src,evnt)cancel_dialog);
         uicontrol('Parent',colormap_dialog,'Style', 'text', 'String', 'Colormaps', 'Position', [10, 320, 280, 20],'HorizontalAlignment','left');
@@ -4527,9 +4581,11 @@ end
         
         function previewColormap
             % Previewing colormap
-            idx = colormap_uicontrol.Value;
-            UI.settings.spikesColormap = colormapList{idx};
-            plotData;
+            if ~isempty(idx)
+                idx = colormap_uicontrol.Value;
+                UI.settings.spikesColormap = colormapList{idx};
+                plotData;
+            end
         end
     end
     
