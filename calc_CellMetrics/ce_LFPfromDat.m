@@ -56,14 +56,16 @@ sizeInBytes = 2; %
 timerVal = tic;
 
 %% files check
-fdat = fullfile(basepath,[basename,'.dat']);
+% fdat = fullfile(basepath,[basename,'.dat']);
+fdat = fullfile(basepath,[session.extracellular.fileName]);
 flfp = fullfile(basepath,[basename,'.lfp']);
 
 %Check the dat
 if ~exist(fdat,'file')
-    error([basename, '.dat file does not exist'])
+%     error([basename, '.dat file does not exist'])
+    error([session.extracellular.fileName, ' file does not exist'])
 end
-fInfo = dir(fullfile(basepath, [basename '.dat']));
+fInfo = dir(fdat);
 
 %If there's already a .lfp file, make sure the user wants to overwrite it
 if exist(flfp,'file')
@@ -124,7 +126,7 @@ for ibatch = 1:nbChunks
     if ibatch>1
         fseek(fidI,((ibatch-1)*(nChannels*sizeInBytes*chunksize))-(nChannels*sizeInBytes*ntbuff),'bof');
         dat = fread(fidI,nChannels*(chunksize+2*ntbuff),'int16');
-        dat = reshape(dat,[nChannels (chunksize+2*ntbuff)]);
+        dat = reshape(dat,[nChannels,[]]);
     else
         dat = fread(fidI,nChannels*(chunksize+ntbuff),'int16');
         dat = reshape(dat,[nChannels (chunksize+ntbuff)]);
