@@ -126,7 +126,7 @@ for ibatch = 1:nbChunks
     if ibatch>1
         fseek(fidI,((ibatch-1)*(nChannels*sizeInBytes*chunksize))-(nChannels*sizeInBytes*ntbuff),'bof');
         dat = fread(fidI,nChannels*(chunksize+2*ntbuff),'int16');
-        dat = reshape(dat,[nChannels,[]]);
+        dat = reshape(dat,nChannels,[]);
     else
         dat = fread(fidI,nChannels*(chunksize+ntbuff),'int16');
         dat = reshape(dat,[nChannels (chunksize+ntbuff)]);

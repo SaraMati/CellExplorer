@@ -15,6 +15,10 @@ preferences.putativeCellType.troughToPeak_boundary = 0.45; %0.525; % Narrow inte
 % preferences.waveform.wfWinKeep = 0.001;        % half width of the waveform. In seconds [default 0.8ms]
 %preferences.waveform.showWaveforms = true;
 
+preferences.deepSuperficial.ripples_durations = [30 15*1000]; % in ms
+preferences.deepSuperficial.ripples_passband = [80 240]; % in Hz
+
+
 disp('User preferences loaded successfully')
 
 end

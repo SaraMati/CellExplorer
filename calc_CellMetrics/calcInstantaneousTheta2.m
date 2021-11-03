@@ -41,7 +41,7 @@ if ~exist(saveAsFullfile,'file') || forceReload
     end
     srLfp = session.extracellular.srLfp;
     disp('Calculating the instantaneous theta frequency')
-    signal = session.extracellular.leastSignificantBit * double(LoadBinary(fullfile(session.general.basePath,[session.general.name '.lfp']),'nChannels',session.extracellular.nChannels,'channels',ch_theta,'precision','int16','frequency',srLfp)); % ,'start',start,'duration',duration
+    signal = session.extracellular.leastSignificantBit * double(LoadBinary(fullfile(basepath,[session.extracellular.fileName]),'nChannels',session.extracellular.nChannels,'channels',ch_theta,'precision','int16','frequency',srLfp)); % ,'start',start,'duration',duration
     Fpass = [4,12];
     Wn_theta = [Fpass(1)/(srLfp/2) Fpass(2)/(srLfp/2)]; % normalized by the nyquist frequency
     [btheta,atheta] = butter(3,Wn_theta);

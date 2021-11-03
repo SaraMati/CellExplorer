@@ -6,5 +6,5 @@ function credentials = db_credentials
 % Last edited: 26-08-2019
 
 % Authentication info
-credentials.username = 'user';      
-credentials.password = 'password';
+credentials.username = 'ayatoll1';      
+credentials.password = 'Ha73p1an5&sticktoyourroutine';

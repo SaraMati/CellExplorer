@@ -8,5 +8,6 @@ function repositories = db_local_repositories
 repositories = {};
 
 % Add your repositories here by the example syntax shown below
+repositories.NYUshare_Datasets = 'Datasets\PeyracheA\Mouse12\';
 % repositories.NYUshare_Datasets = '/Volumes/buzsakilab/Buzsakilabspace/Datasets'; % Mac
 % repositories.NYUshare_Datasets = 'Z:\Buzsakilabspace\Datasets'; % Windows
