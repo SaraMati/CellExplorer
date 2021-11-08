@@ -1,7 +1,7 @@
 function InstantaneousTheta = calcInstantaneousTheta2(session,varargin)
 % Calculates the instantaneous theta with phase and power
 % By Peter Petersen
-% Last edited: 18-08-2019
+% Last edited: 2021-11-07    %18-08-2019
 
 p = inputParser;
 addParameter(p,'forceReload',false,@islogical);
@@ -42,6 +42,11 @@ if ~exist(saveAsFullfile,'file') || forceReload
     srLfp = session.extracellular.srLfp;
     disp('Calculating the instantaneous theta frequency')
     signal = session.extracellular.leastSignificantBit * double(LoadBinary(fullfile(session.general.basePath,[session.general.name '.lfp']),'nChannels',session.extracellular.nChannels,'channels',ch_theta,'precision','int16','frequency',srLfp)); % ,'start',start,'duration',duration
+    signal(abs(signal)>1500)=0; %added by Sara to remove artifact
+%     signal(signal>1.2*std(signal) | signal<-1.2*std(signal))=0; 
+%     artifact_inds = (signal>1.2*std(signal) | signal<-1.2*std(signal));
+%     t    = 1:numel(signal);
+%     signal(artifact_inds) = interp1(t(~artifact_inds), signal(~artifact_inds), t(artifact_inds));
     Fpass = [4,11];
     Wn_theta = [Fpass(1)/(srLfp/2) Fpass(2)/(srLfp/2)]; % normalized by the nyquist frequency
     [btheta,atheta] = butter(3,Wn_theta);
