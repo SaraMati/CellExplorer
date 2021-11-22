@@ -2,7 +2,8 @@
 .DS_Store
 CellExplorer.sublime-workspace
 CellExplorer.sublime-project
-calc_CellMetrics/data_NeuroScope2.mat
+*data_NeuroScope2.mat
 *.asv
+calc_CellMetrics/data_NeuroScope2.mat
 calc_CellMetrics/last_preferences_CellExplorer.mat
 
