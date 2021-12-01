@@ -9,10 +9,10 @@ function preferences = user_preferences(preferences,session)
 % preferences.waveform.wfWin_sec = 0.004;         % Larger window of the waveform for filtering (to avoid edge effects). Total width in seconds [default 4ms]
 % preferences.waveform.wfWinKeep = 0.0008;        % half width of the waveform. In seconds [default 0.8ms]
 
-preferences.waveform.nPull = 1000;
+preferences.waveform.nPull = 600;
 preferences.putativeCellType.troughToPeak_boundary = 0.45; %0.525; % Narrow interneuron assigned if troughToPeak <= 0.425ms
-% preferences.waveform.wfWin_sec = 0.005;         % Larger window of the waveform for filtering (to avoid edge effects). Total width in seconds [default 4ms]
-% preferences.waveform.wfWinKeep = 0.001;        % half width of the waveform. In seconds [default 0.8ms]
+preferences.waveform.wfWin_sec = 0.008; %0.005;         % Larger window of the waveform for filtering (to avoid edge effects). Total width in seconds [default 4ms]
+preferences.waveform.wfWinKeep = 0.002; %0.001;        % half width of the waveform. In seconds [default 0.8ms]
 %preferences.waveform.showWaveforms = true;
 
 preferences.deepSuperficial.ripples_durations = [30 15*1000]; % in ms

@@ -169,7 +169,9 @@ for i = 1:length(unitsToProcess)
     end
     
     wf2 = mean(wf,3);
-    rawWaveform_all = detrend(wf2 - mean(wf2,2));
+%     rawWaveform_all = detrend(wf2 - mean(wf2,2));
+    rawWaveform_all = wf2 - mean(wf2,2);
+
     spikes.rawWaveform{ii} = rawWaveform_all(spikes.maxWaveformCh1(ii),window_interval);
     rawWaveform_std = std((wf(spikes.maxWaveformCh1(ii),:,:)-mean(wf(spikes.maxWaveformCh1(ii),:,:),3)),0,3);
     filtWaveform_all = mean(wfF,3);
