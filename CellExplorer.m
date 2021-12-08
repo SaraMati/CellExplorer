@@ -722,11 +722,11 @@ function updateUI
         if UI.checkbox.logx.Value == 1
             AA = cell_metrics.(UI.plot.xTitle)(UI.params.subset);
             AA = AA( ~isnan(AA) & ~isinf(AA) & AA>0);
-            fig1_axislimit_x = [min(AA,'omitnan'),max(AA,'omitnan')];
+            fig1_axislimit_x = [min(AA,[],'omitnan'),max(AA,[],'omitnan')];
         else
             AA = cell_metrics.(UI.plot.xTitle)(UI.params.subset);
             AA = AA( ~isnan(AA) & ~isinf(AA));
-            fig1_axislimit_x = [min(AA,'omitnan'),max(AA,'omitnan')];
+            fig1_axislimit_x = [min(AA,[],'omitnan'),max(AA,[],'omitnan')];
         end
         if isempty(fig1_axislimit_x)
             fig1_axislimit_x = [0 1];
@@ -736,11 +736,11 @@ function updateUI
         if UI.checkbox.logy.Value == 1
             AA = cell_metrics.(UI.plot.yTitle)(UI.params.subset);
             AA = AA( ~isnan(AA) & ~isinf(AA) & AA>0);
-            fig1_axislimit_y = [min(AA,'omitnan'),max(AA)];
+            fig1_axislimit_y = [min(AA,[],'omitnan'),max(AA)];
         else
             AA = cell_metrics.(UI.plot.yTitle)(UI.params.subset);
             AA = AA( ~isnan(AA) & ~isinf(AA));
-            fig1_axislimit_y = [min(AA,'omitnan'),max(AA)];
+            fig1_axislimit_y = [min(AA,[],'omitnan'),max(AA)];
         end
         if isempty(fig1_axislimit_y)
             fig1_axislimit_y = [0 1];
