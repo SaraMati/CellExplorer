@@ -17,7 +17,7 @@ addParameter(p,'nPull',preferences.waveform.nPull, @isnumeric); % number of spik
 addParameter(p,'wfWin_sec', preferences.waveform.wfWin_sec, @isnumeric); % Larger size of waveform windows for filterning. total width in seconds (default: 0.004)
 addParameter(p,'wfWinKeep', preferences.waveform.wfWinKeep, @isnumeric); % half width in seconds (default: 0.0008)
 addParameter(p,'showWaveforms', true, @islogical);
-addParameter(p,'filtFreq',[500,8000], @isnumeric); % Band pass filter (default: 500Hz - 8000Hz)
+addParameter(p,'filtFreq',[150,8000], @isnumeric); % Band pass filter (default: 500Hz - 8000Hz)
 addParameter(p,'keepWaveforms_filt', false, @islogical); % Keep all extracted filtered waveforms
 addParameter(p,'keepWaveforms_raw', false, @islogical); % Keep all extracted raw waveforms
 addParameter(p,'saveFig', false, @islogical); % Save figure with data
@@ -155,7 +155,11 @@ for i = 1:length(unitsToProcess)
         wfF(:,:,jjj) = filtfilt(b1, a1, wf(:,:,jjj));
     end
     wfF = permute(wfF,[3,1,2]);
-    wf = permute(wf,[3,1,2]);
+    
+    for jjj = 1 : nChannels
+        wf(:,:,jjj) = detrend(wf(:,:,jjj));
+    end 
+    wf = permute(wf,[3,1,2]);  
     wfF2 = mean(wfF(goodChannels,:,:),3)';
     [~, maxWaveformCh1] = max(max(wfF2(window_interval,:))-min(wfF2(window_interval,:)));
     spikes.maxWaveformCh1(ii) = goodChannels(maxWaveformCh1);
@@ -168,10 +172,7 @@ for i = 1:length(unitsToProcess)
         end
     end
     
-    wf2 = mean(wf,3);
-%     rawWaveform_all = detrend(wf2 - mean(wf2,2));
-    rawWaveform_all = wf2 - mean(wf2,2);
-
+    rawWaveform_all = mean(wf,3);
     spikes.rawWaveform{ii} = rawWaveform_all(spikes.maxWaveformCh1(ii),window_interval);
     rawWaveform_std = std((wf(spikes.maxWaveformCh1(ii),:,:)-mean(wf(spikes.maxWaveformCh1(ii),:,:),3)),0,3);
     filtWaveform_all = mean(wfF,3);
@@ -223,18 +224,18 @@ for i = 1:length(unitsToProcess)
         if ishandle(fig1)
         figure(fig1)
         subplot(5,3,[1,4]), hold off
-        plot(time,wfF2), hold on, plot(time,wfF2(:,maxWaveformCh1),'k','linewidth',2), xlabel('Time (ms)'),title('All channels'),ylabel('Average filtered waveforms across channels (\muV)','Interpreter','tex'),hold off
+        plot(time,wfF2), hold on, plot(time,wfF2(:,maxWaveformCh1),'k','linewidth',2), xlabel('Time (ms)'),title('All channels'),ylabel('Average filtered waveforms across channels (\muV)','Interpreter','tex'),xlim([time(1),time(end)]),hold off
         subplot(5,3,[2,5]), hold off,
         plot(time,permute(wfF(spikes.maxWaveformCh1(ii),:,:),[2,3,1])), hold on
-        plot(time,mean(permute(wfF(spikes.maxWaveformCh1(ii),:,:),[2,3,1]),2),'k','linewidth',2),
+        plot(time,mean(permute(wfF(spikes.maxWaveformCh1(ii),:,:),[2,3,1]),2),'k','linewidth',2),xlim([time(1),time(end)])
         title(['Peak channel = ',num2str(spikes.maxWaveformCh1(ii))]),ylabel('Filtered waveforms from peak channel (\muV)','Interpreter','tex'), xlabel('Time (ms)')
         
         subplot(5,3,[7,10]), hold off,
         plot(spikes.timeWaveform{ii},vertcat(spikes.rawWaveform{1:ii})'), hold on
-        plot(spikes.timeWaveform{ii},spikes.rawWaveform{ii},'-k','linewidth',1.5), xlabel('Time (ms)'), ylabel('Raw waveforms (\muV)','Interpreter','tex'), xlim([-0.8,0.8])
+        plot(spikes.timeWaveform{ii},spikes.rawWaveform{ii},'-k','linewidth',1.5), xlabel('Time (ms)'), ylabel('Raw waveforms (\muV)','Interpreter','tex')%,xlim([-wfWinKeep*1000,wfWinKeep*1000]) % xlim([-0.8,0.8])
         subplot(5,3,[8,11]), hold off,
         plot(spikes.timeWaveform{ii},vertcat(spikes.filtWaveform{1:ii})'), hold on
-        plot(spikes.timeWaveform{ii},spikes.filtWaveform{ii},'-k','linewidth',1.5), xlabel('Time (ms)'), ylabel('Filtered waveforms (\muV)','Interpreter','tex'), xlim([-0.8,0.8])
+        plot(spikes.timeWaveform{ii},spikes.filtWaveform{ii},'-k','linewidth',1.5), xlabel('Time (ms)'), ylabel('Filtered waveforms (\muV)','Interpreter','tex')%, xlim([-wfWinKeep*1000,wfWinKeep*1000])
         subplot(5,3,3), hold off
         plot(spkTmp/sr,permute(range((wfF(spikes.maxWaveformCh1(ii),window_interval,:)),2),[3,2,1]),'.b')
         ylabel('Amplitude (\muV)','Interpreter','tex'), xlabel('Time (sec)'), title(['Spike amplitudes (nPull=' num2str(nPull),')'])

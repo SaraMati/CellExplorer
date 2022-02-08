@@ -461,7 +461,8 @@ if any(contains(parameters.metrics,{'waveform_metrics','all'})) && ~any(contains
         cell_metrics.troughtoPeakDerivative = waveform_metrics.derivative_TroughtoPeak;
         cell_metrics.ab_ratio = waveform_metrics.ab_ratio;
         cell_metrics.polarity = waveform_metrics.polarity;
-        
+        cell_metrics.peaktoTrough = waveform_metrics.peaktoTrough;
+
         % Removing outdated fields
         field2remove = {'derivative_TroughtoPeak','filtWaveform','filtWaveform_std','rawWaveform','rawWaveform_std','timeWaveform'};
         test = isfield(cell_metrics,field2remove);
